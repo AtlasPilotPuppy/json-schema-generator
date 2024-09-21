@@ -14,6 +14,13 @@ This is a command-line tool that generates JSON Schema from JSON data. It's buil
 
 To install the JSON Schema Generator, you need to have Rust and Cargo installed on your system. Then, you can clone this repository and build the project:
 
+### Use directly as a Cargo utility
+```bash
+cargo install json_schema_generator
+json_schema_generator test.json
+```
+
+### Build from Source
 ```bash
 git clone https://github.com/AtlasPilotPuppy/json-schema-generator.git
 cd json-schema-generator
