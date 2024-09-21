@@ -67,7 +67,6 @@ This tool generates JSON Schema compatible with draft-07.
 ## Limitations
 
 - The tool generates a basic schema and may not capture all possible constraints or patterns in your data.
-- It doesn't handle `$ref` references or complex validation rules.
 - The schema for arrays assumes all items in the array follow the same schema.
 
 ## Contributing
