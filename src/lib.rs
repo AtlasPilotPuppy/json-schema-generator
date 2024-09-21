@@ -96,3 +96,151 @@ fn merge_schemas(schema1: &Value, schema2: &Value) -> Value {
 
     merged
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_generate_json_schema_string() {
+        let input = json!("test");
+        let expected = json!({"type": "string"});
+        assert_eq!(generate_json_schema(&input), expected);
+    }
+
+    #[test]
+    fn test_generate_json_schema_integer() {
+        let input = json!(42);
+        let expected = json!({"type": "integer"});
+        assert_eq!(generate_json_schema(&input), expected);
+    }
+
+    #[test]
+    fn test_generate_json_schema_number() {
+        let input = json!(3.14);
+        let expected = json!({"type": "number"});
+        assert_eq!(generate_json_schema(&input), expected);
+    }
+
+    #[test]
+    fn test_generate_json_schema_boolean() {
+        let input = json!(true);
+        let expected = json!({"type": "boolean"});
+        assert_eq!(generate_json_schema(&input), expected);
+    }
+
+    #[test]
+    fn test_generate_json_schema_null() {
+        let input = json!(null);
+        let expected = json!({"type": "null"});
+        assert_eq!(generate_json_schema(&input), expected);
+    }
+
+    #[test]
+    fn test_generate_object_schema() {
+        let input = json!({
+            "name": "John Doe",
+            "age": 30,
+            "is_student": false
+        });
+        let expected = json!({
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "age": {"type": "integer"},
+                "is_student": {"type": "boolean"}
+            },
+            "required": ["age", "is_student", "name"]
+        });
+        assert_eq!(generate_json_schema(&input), expected);
+    }
+    
+
+    #[test]
+    fn test_generate_array_schema() {
+        let input = json!([1, 2, 3]);
+        let expected = json!({
+            "type": "array",
+            "items": {"type": "integer"}
+        });
+        assert_eq!(generate_json_schema(&input), expected);
+    }
+
+    #[test]
+    fn test_generate_array_schema_mixed_types() {
+        let input = json!([1, "two", 3.0]);
+        let expected = json!({
+            "type": "array",
+            "items": {
+                "oneOf": [
+                    {"oneOf": [
+                        {"type": "integer"},
+                        {"type": "string"}
+                    ]},
+                    {"type": "number"}
+                ]
+            }
+        });
+        assert_eq!(generate_json_schema(&input), expected);
+    }
+    
+
+    #[test]
+    fn test_generate_array_schema_empty() {
+        let input = json!([]);
+        let expected = json!({
+            "type": "array",
+            "items": {}
+        });
+        assert_eq!(generate_json_schema(&input), expected);
+    }
+
+    #[test]
+    fn test_find_common_schema() {
+        let schemas = vec![
+            json!({"type": "integer"}),
+            json!({"type": "string"}),
+            json!({"type": "boolean"})
+        ];
+        let expected = json!({
+            "oneOf": [
+                {"oneOf": [
+                    {"type": "integer"},
+                    {"type": "string"}
+                ]},
+                {"type": "boolean"}
+            ]
+        });
+        assert_eq!(find_common_schema(&schemas), expected);
+    }
+    
+
+    #[test]
+    fn test_merge_schemas_same_type() {
+        let schema1 = json!({"type": "object", "properties": {"a": {"type": "string"}}});
+        let schema2 = json!({"type": "object", "properties": {"b": {"type": "integer"}}});
+        let expected = json!({
+            "type": "object",
+            "properties": {
+                "a": {"type": "string"},
+                "b": {"type": "integer"}
+            }
+        });
+        assert_eq!(merge_schemas(&schema1, &schema2), expected);
+    }
+
+    #[test]
+    fn test_merge_schemas_different_types() {
+        let schema1 = json!({"type": "string"});
+        let schema2 = json!({"type": "integer"});
+        let expected = json!({
+            "oneOf": [
+                {"type": "string"},
+                {"type": "integer"}
+            ]
+        });
+        assert_eq!(merge_schemas(&schema1, &schema2), expected);
+    }
+}
