@@ -1,41 +1,36 @@
-use std::env;
 use std::fs;
-use std::io::{self, Read, Write};
+use std::io::{self, Read};
 use std::path::Path;
+use clap::Parser;
 use json_schema_generator::generate_json_schema;
 use serde_json::Value;
 
-fn parse_args() -> Result<(Option<String>, Option<String>), String> {
-    let args: Vec<String> = env::args().collect();
-    let mut input = None;
-    let mut output = None;
-    let mut i = 1;
+#[derive(Parser)]
+#[clap(author, version, about, long_about = None)]
+struct Cli {
+    /// Input file name
+    input: Option<String>,
 
-    while i < args.len() {
-        match args[i].as_str() {
-            "-o" | "--output" => {
-                if i + 1 < args.len() {
-                    output = Some(args[i + 1].clone());
-                    i += 2;
-                } else {
-                    return Err("Missing argument for output file".to_string());
-                }
-            }
-            _ => {
-                if input.is_none() {
-                    input = Some(args[i].clone());
-                } else {
-                    return Err("Too many arguments".to_string());
-                }
-                i += 1;
-            }
-        }
-    }
+    /// Output file name
+    #[clap(short, long)]
+    output: Option<String>,
 
-    Ok((input, output))
+    /// Output to stdout
+    #[clap(short, long)]
+    stdout: bool,
 }
 
-fn read_input(input: &Option<String>) -> Result<Value, Box<dyn std::error::Error>> {
+fn main() -> io::Result<()> {
+    let cli = Cli::parse();
+
+    let json_value = read_input(&cli.input)?;
+    let schema = generate_json_schema(&json_value);
+    write_output(&cli, &schema)?;
+
+    Ok(())
+}
+
+fn read_input(input: &Option<String>) -> io::Result<Value> {
     let json_str = match input {
         Some(filename) => fs::read_to_string(filename)?,
         None => {
@@ -45,46 +40,22 @@ fn read_input(input: &Option<String>) -> Result<Value, Box<dyn std::error::Error
         }
     };
 
-    Ok(serde_json::from_str(&json_str)?)
+    serde_json::from_str(&json_str).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
 }
 
-fn write_output(output: &Option<String>, schema: &Value) -> Result<(), Box<dyn std::error::Error>> {
+fn write_output(cli: &Cli, schema: &Value) -> io::Result<()> {
     let schema_str = serde_json::to_string_pretty(schema)?;
 
-    match output {
-        Some(filename) => fs::write(filename, schema_str)?,
-        None => io::stdout().write_all(schema_str.as_bytes())?,
+    if cli.stdout {
+        println!("{}", schema_str);
+    } else if let Some(output_file) = &cli.output {
+        fs::write(output_file, &schema_str)?;
+    } else if let Some(input_file) = &cli.input {
+        let output_file = format!("{}.jsonschema", Path::new(input_file).file_stem().unwrap().to_str().unwrap());
+        fs::write(output_file, &schema_str)?;
+    } else {
+        println!("{}", schema_str);
     }
 
     Ok(())
-}
-
-fn get_default_output(input: &Option<String>) -> Option<String> {
-    input.as_ref().map(|filename| {
-        let path = Path::new(filename);
-        let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("output");
-        format!("{}.jsonschema", stem)
-    })
-}
-
-fn main() {
-    let (input, output) = parse_args().unwrap_or_else(|e| {
-        eprintln!("Error: {}", e);
-        std::process::exit(1);
-    });
-
-    let json_value = read_input(&input).unwrap_or_else(|e| {
-        eprintln!("Error reading input: {}", e);
-        std::process::exit(1);
-    });
-
-    let schema = generate_json_schema(&json_value);
-
-    let default_output = get_default_output(&input);
-    let final_output = output.or(default_output);
-
-    write_output(&final_output, &schema).unwrap_or_else(|e| {
-        eprintln!("Error writing output: {}", e);
-        std::process::exit(1);
-    });
 }
