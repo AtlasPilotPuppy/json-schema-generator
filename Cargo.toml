@@ -1,6 +1,6 @@
 [package]
 name = "json-schema-generator"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Anant Asthana <anant@datasecurity.expert>"]
 description = "A tool to generate JSON Schema from JSON data"
