@@ -1,5 +1,37 @@
+//! This module provides functionality to generate JSON schemas from JSON instances.
+//! It supports various JSON types including objects, arrays, strings, numbers, booleans, and null values.
+
 use serde_json::{json, Map, Value};
 
+/// Generates a JSON schema for a given JSON instance.
+///
+/// # Arguments
+///
+/// * `instance` - A reference to a `serde_json::Value` representing the JSON instance.
+///
+/// # Returns
+///
+/// A `serde_json::Value` representing the JSON schema for the given instance.
+///
+/// # Examples
+///
+/// ```
+/// use serde_json::json;
+/// use json_schema_generator::generate_json_schema;
+///
+/// let instance = json!({"name": "John", "age": 30});
+/// let schema = generate_json_schema(&instance);
+///
+/// assert_eq!(schema, json!({
+/// "$schema": "http://json-schema.org/draft-07/schema#",
+///     "type": "object",
+///     "properties": {
+///         "name": {"type": "string"},
+///         "age": {"type": "integer"}
+///     },
+///     "required": ["age", "name"]
+/// }));
+/// ```
 pub fn generate_json_schema(instance: &Value) -> Value {
     match instance {
         Value::Object(_) => generate_object_schema(instance),
