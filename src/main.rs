@@ -1,9 +1,9 @@
-use std::fs;
-use std::io::{self, Read};
-use std::path::Path;
 use clap::Parser;
 use json_schema_generator::generate_json_schema;
 use serde_json::Value;
+use std::fs;
+use std::io::{self, Read};
+use std::path::Path;
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -51,7 +51,10 @@ fn write_output(cli: &Cli, schema: &Value) -> io::Result<()> {
     } else if let Some(output_file) = &cli.output {
         fs::write(output_file, &schema_str)?;
     } else if let Some(input_file) = &cli.input {
-        let output_file = format!("{}.jsonschema", Path::new(input_file).file_stem().unwrap().to_str().unwrap());
+        let output_file = format!(
+            "{}.jsonschema",
+            Path::new(input_file).file_stem().unwrap().to_str().unwrap()
+        );
         fs::write(output_file, &schema_str)?;
     } else {
         println!("{}", schema_str);

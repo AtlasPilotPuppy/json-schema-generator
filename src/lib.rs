@@ -1,4 +1,4 @@
-use serde_json::{Value, json, Map};
+use serde_json::{json, Map, Value};
 
 pub fn generate_json_schema(instance: &Value) -> Value {
     match instance {
@@ -11,7 +11,7 @@ pub fn generate_json_schema(instance: &Value) -> Value {
             } else {
                 json!({"type": "number"})
             }
-        },
+        }
         Value::Bool(_) => json!({"type": "boolean"}),
         Value::Null => json!({"type": "null"}),
     }
@@ -34,7 +34,10 @@ fn generate_object_schema(instance: &Value) -> Value {
                     obj.remove("$schema"); // Remove $schema from nested objects
                 }
                 schema["properties"][key] = sub_schema;
-                schema["required"].as_array_mut().unwrap().push(Value::String(key.clone()));
+                schema["required"]
+                    .as_array_mut()
+                    .unwrap()
+                    .push(Value::String(key.clone()));
             }
         }
     }
@@ -49,7 +52,6 @@ fn generate_object_schema(instance: &Value) -> Value {
 
     schema
 }
-
 
 fn generate_array_schema(arr: &Vec<Value>) -> Value {
     if arr.is_empty() {
@@ -172,7 +174,6 @@ mod tests {
         });
         assert_eq!(generate_json_schema(&input), expected);
     }
-    
 
     #[test]
     fn test_generate_array_schema() {
@@ -201,7 +202,6 @@ mod tests {
         });
         assert_eq!(generate_json_schema(&input), expected);
     }
-    
 
     #[test]
     fn test_generate_array_schema_empty() {
@@ -218,7 +218,7 @@ mod tests {
         let schemas = vec![
             json!({"type": "integer"}),
             json!({"type": "string"}),
-            json!({"type": "boolean"})
+            json!({"type": "boolean"}),
         ];
         let expected = json!({
             "oneOf": [
@@ -231,7 +231,6 @@ mod tests {
         });
         assert_eq!(find_common_schema(&schemas), expected);
     }
-    
 
     #[test]
     fn test_merge_schemas_same_type() {
@@ -287,5 +286,4 @@ mod tests {
         });
         assert_eq!(generate_json_schema(&input), expected);
     }
-    
 }
