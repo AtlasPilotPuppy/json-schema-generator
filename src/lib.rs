@@ -19,7 +19,6 @@ pub fn generate_json_schema(instance: &Value) -> Value {
 
 fn generate_object_schema(instance: &Value) -> Value {
     let mut schema = json!({
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "properties": {},
         "required": []
@@ -27,13 +26,30 @@ fn generate_object_schema(instance: &Value) -> Value {
 
     if let Value::Object(obj) = instance {
         for (key, value) in obj {
-            schema["properties"][key] = generate_json_schema(value);
-            schema["required"].as_array_mut().unwrap().push(Value::String(key.clone()));
+            if key == "$ref" {
+                schema["$ref"] = value.clone();
+            } else {
+                let mut sub_schema = generate_json_schema(value);
+                if let Some(obj) = sub_schema.as_object_mut() {
+                    obj.remove("$schema"); // Remove $schema from nested objects
+                }
+                schema["properties"][key] = sub_schema;
+                schema["required"].as_array_mut().unwrap().push(Value::String(key.clone()));
+            }
         }
     }
 
+    // Sort the "required" array
+    if let Some(required) = schema["required"].as_array_mut() {
+        required.sort_by(|a, b| a.as_str().unwrap().cmp(b.as_str().unwrap()));
+    }
+
+    // Add $schema only to the top-level object
+    schema["$schema"] = json!("http://json-schema.org/draft-07/schema#");
+
     schema
 }
+
 
 fn generate_array_schema(arr: &Vec<Value>) -> Value {
     if arr.is_empty() {
@@ -243,4 +259,33 @@ mod tests {
         });
         assert_eq!(merge_schemas(&schema1, &schema2), expected);
     }
+
+    #[test]
+    fn test_generate_schema_with_ref() {
+        let input = json!({
+            "$ref": "#/definitions/address",
+            "address": {
+                "street": "123 Main St",
+                "city": "New York"
+            }
+        });
+        let expected = json!({
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "object",
+                    "properties": {
+                        "street": {"type": "string"},
+                        "city": {"type": "string"}
+                    },
+                    "required": ["city", "street"]
+                }
+            },
+            "required": ["address"],
+            "$ref": "#/definitions/address"
+        });
+        assert_eq!(generate_json_schema(&input), expected);
+    }
+    
 }
